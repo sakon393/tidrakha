@@ -4,7 +4,7 @@
   const COLORS = { red: '#e01b12', black: '#000000', yellow: '#ffd400', white: '#ffffff' };
   const PREFS_KEY = 'tag-prefs-v3';
   const TABLE_ONE_COLUMN_MAX = 5;   // more sizes than this split into two columns
-  const PHOTO_EDGE = 1440;          // short edge of a stored photo; keeps the phone's storage from filling up
+  const PHOTO_EDGE = 1440;          // short edge of a stored added picture; keeps the phone's storage from filling up
   const SAVE_DELAY = 300;
   const SESSION_KEY = 'tag-session-v1';
   const RUNNING_KEY = 'tag-running-v1';
@@ -14,7 +14,8 @@
   const LIST_PAD = 40;
   const WRAP_PX = 50;               // size words are measured at, then scaled
   const SWIPE_PX = 60;              // finger travel that counts as a swipe
-  const AXIS_PX = 10;               // travel needed to tell a swipe from a drag
+  const SLIDE_MS = 340;             // matches .gliding in style.css
+  const SLIDE_GAP = 16;             // space between two photos while sliding
   const SCREENS = ['screenBrand', 'screenPhoto', 'screenCategory', 'screenForm'];
   const TEXT_PX = 46;               // starting size of added text
   const OLD_TEXT_PX = { s: 34, m: 46, l: 64 };   // saved before the size became a slider
@@ -25,6 +26,8 @@
   const $ = (id) => document.getElementById(id);
   const canvas = $('canvas');
   const ctx = canvas.getContext('2d');
+  const peek = $('peek');           // the neighbouring item, shown while sliding
+  const peekCtx = peek.getContext('2d');
   const offCanvas = document.createElement('canvas');
   offCanvas.width = OUTPUT;
   offCanvas.height = OUTPUT;
@@ -50,7 +53,6 @@
     sizes: new Set(allChartSizes(category)),   // size labels, or size names on a chart
     chart: { kind: 'top', size: '', value: '', custom: '' },   // what was typed for a size chart
     sizeScale: 100,         // percent, for the size box of this item only
-    pan: { x: 0.5, y: 0.5 },   // which part of the photo the square crop shows
     moved: emptyMoved(),    // top-left of a dragged block, as a fraction of the image
     price: '',
     full: '',
@@ -105,7 +107,6 @@
     sizes: [...it.sizes],
     chart: it.chart,
     sizeScale: it.sizeScale,
-    pan: it.pan,
     moved: it.moved,
     price: it.price,
     full: it.full,
@@ -125,8 +126,8 @@
       ? brand.categories.find((c) => c.id === record.categoryId) || null
       : null;
     const it = newItem(record.id, record.brandId, category);
-    const { sizes, chart, sizeScale = 100, pan, moved, price, full, code, extras = [] } = record;
-    Object.assign(it, { sizes: new Set(sizes), sizeScale, pan, moved, price, full, code, extras: extras.map(upgradeExtra) });
+    const { sizes, chart, sizeScale = 100, moved, price, full, code, extras = [] } = record;
+    Object.assign(it, { sizes: new Set(sizes), sizeScale, moved, price, full, code, extras: extras.map(upgradeExtra) });
     if (chart) Object.assign(it.chart, chart);
     if (Array.isArray(it.chart.custom)) it.chart.custom = it.chart.custom.filter(Boolean).join('\n');   // was one row each
     // Clothes saved when the only choice was the fixed list S เอว 28 to 2XL เอว 36.
@@ -238,6 +239,7 @@
     $('nextBtn').hidden = !onForm;
     $('sendBar').hidden = !onForm;
     $('title').textContent = state.brand && screen !== 'screenBrand' ? state.brand.name : 'ติดราคา';
+    [...$('steps').children].forEach((bar, i) => bar.classList.toggle('on', i <= SCREENS.indexOf(screen)));
     setStatus('');
     scrollTo(0, 0);
   }
@@ -259,7 +261,7 @@
       btn.disabled = !brand.categories;
       btn.innerHTML = '<b></b><small></small>';
       btn.querySelector('b').textContent = brand.name;
-      btn.querySelector('small').textContent = brand.categories ? '' : 'เร็ว ๆ นี้';
+      btn.querySelector('small').textContent = brand.categories ? 'เริ่มทำรูป ›' : 'เร็ว ๆ นี้';
       btn.addEventListener('click', () => chooseBrand(brand));
       $('brandGrid').appendChild(btn);
     });
@@ -282,7 +284,8 @@
     brand.categories.forEach((category) => {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.textContent = category.name;
+      btn.appendChild(make('span', 'cat-icon', category.icon)).setAttribute('aria-hidden', 'true');
+      btn.appendChild(make('span', '', category.name));
       btn.addEventListener('click', () => chooseCategory(category));
       $('categoryGrid').appendChild(btn);
     });
@@ -298,7 +301,28 @@
     });
   }
 
-  // Stored photos are cut down to what the 1080px output can use.
+  async function encodePhoto(surface, quality) {
+    const blob = await new Promise((resolve) => { surface.toBlob(resolve, 'image/jpeg', quality); });
+    if (!blob) throw new Error('encode failed');
+    return { ...await loadImage(blob), blob };
+  }
+
+  // The product photo is fixed here: the middle square at 1080 × 1080, changed only by a new photo.
+  async function squarePhoto(file) {
+    const { img, url } = await loadImage(file);
+    const { naturalWidth: w, naturalHeight: h } = img;
+    const side = Math.min(w, h);
+    const square = document.createElement('canvas');
+    square.width = OUTPUT;
+    square.height = OUTPUT;
+    const c = square.getContext('2d');
+    c.imageSmoothingQuality = 'high';
+    c.drawImage(img, (w - side) / 2, (h - side) / 2, side, side, 0, 0, OUTPUT, OUTPUT);
+    URL.revokeObjectURL(url);
+    return encodePhoto(square, 0.95);
+  }
+
+  // Added pictures keep some spare pixels for their zoom and framing.
   async function shrinkPhoto(file) {
     const loaded = await loadImage(file);
     const { img, url } = loaded;
@@ -309,9 +333,7 @@
     small.height = Math.round(img.naturalHeight * scale);
     small.getContext('2d').drawImage(img, 0, 0, small.width, small.height);
     URL.revokeObjectURL(url);
-    const blob = await new Promise((resolve) => { small.toBlob(resolve, 'image/jpeg', 0.9); });
-    if (!blob) throw new Error('encode failed');
-    return { ...await loadImage(blob), blob };
+    return encodePhoto(small, 0.9);
   }
 
   function addItem({ img, url, blob }) {
@@ -330,15 +352,16 @@
   function replacePhoto({ img, url, blob }) {
     const it = item();
     releaseImage(it);
-    Object.assign(it, { img, url, pan: { x: 0.5, y: 0.5 } });
+    Object.assign(it, { img, url });
     keepPhoto(it, blob);
     changed();
   }
 
   async function onProduct(file) {
     if (!file) return;
+    setStatus('กำลังจัดรูปเป็น 1080 × 1080…');
     try {
-      const photo = await shrinkPhoto(file);
+      const photo = await squarePhoto(file);
       if (state.adding || !item()) addItem(photo);
       else replacePhoto(photo);
       state.adding = false;
@@ -354,8 +377,9 @@
   // A new photo for this item. Its price, code and sizes stay as they are.
   async function onRetake(file) {
     if (!file) return;
+    setStatus('กำลังจัดรูปเป็น 1080 × 1080…');
     try {
-      replacePhoto(await shrinkPhoto(file));
+      replacePhoto(await squarePhoto(file));
       openForm();
     } catch (e) {
       setStatus('เปิดรูปสินค้าไม่ได้ ลองถ่ายใหม่อีกครั้ง', true);
@@ -1009,16 +1033,11 @@
     it.extras.filter((extra) => extra.kind === 'text').forEach(drawTextExtra);   // words stay readable
   }
 
-  // How far the crop can slide, in photo pixels.
-  function cropSlack(it = item()) {
+  // New photos are already square; one kept from an older version is cut from its middle.
+  function drawPhoto(it) {
     const { naturalWidth: w, naturalHeight: h } = it.img;
     const side = Math.min(w, h);
-    return { side, x: w - side, y: h - side };
-  }
-
-  function drawPhoto(it) {
-    const { side, x, y } = cropSlack(it);
-    pen.drawImage(it.img, x * it.pan.x, y * it.pan.y, side, side, 0, 0, OUTPUT, OUTPUT);
+    pen.drawImage(it.img, (w - side) / 2, (h - side) / 2, side, side, 0, 0, OUTPUT, OUTPUT);
   }
 
   function compose(it, surface, blocks) {
@@ -1154,6 +1173,94 @@
     show('screenPhoto');
   }
 
+  // --- Sliding between items ---
+
+  const wait = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
+  const neighbour = (step) => state.items[state.index + step];
+  let sliding = false;
+  let peeking = null;      // item drawn on the peek card
+  let peekReady = null;
+
+  function drawPeek(it) {
+    if (peeking === it) return peekReady;
+    peeking = it;
+    peek.hidden = true;
+    peekReady = (async () => {
+      await ensureAllImages(it);
+      if (peeking !== it) return;
+      compose(it, peekCtx, {});
+      peek.hidden = false;
+    })().catch(() => { /* openForm reports a photo that cannot be opened */ });
+    return peekReady;
+  }
+
+  function placeCards(x, step) {
+    const slot = canvas.clientWidth + SLIDE_GAP;
+    const across = Math.min(1, Math.abs(x) / slot);
+    canvas.style.transform = `translateX(${x}px) scale(${1 - 0.06 * across})`;
+    peek.style.transform = `translateX(${x + step * slot}px) scale(${0.94 + 0.06 * across})`;
+  }
+
+  function clearCards() {
+    canvas.style.transform = '';
+    peek.style.transform = '';
+    peek.hidden = true;
+    peeking = null;
+  }
+
+  async function glide(x, step) {
+    $('stage').classList.add('gliding');
+    placeCards(x, step);
+    await wait(SLIDE_MS);
+    $('stage').classList.remove('gliding');
+  }
+
+  async function slideTo(step, from = 0) {
+    const next = neighbour(step);
+    if (!next || sliding) return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      clearCards();
+      goToItem(step);
+      return;
+    }
+    sliding = true;
+    scrollTo({ top: 0, behavior: 'smooth' });
+    await drawPeek(next);
+    placeCards(from, step);
+    peek.getBoundingClientRect();   // the browser has to see the start before the move
+    await glide(-step * (canvas.clientWidth + SLIDE_GAP), step);
+    await ensureAllImages(next).catch(() => {});
+    goToItem(step);
+    clearCards();
+    sliding = false;
+  }
+
+  function followFinger({ travel }) {
+    const step = travel < 0 ? 1 : -1;
+    const next = neighbour(step);
+    if (next) {
+      drawPeek(next);
+      placeCards(travel, step);
+    } else {       // nothing further this way, so the photo only gives a little
+      clearCards();
+      canvas.style.transform = `translateX(${travel * 0.2}px)`;
+    }
+  }
+
+  async function settleBack({ travel }) {
+    sliding = true;
+    await glide(0, travel < 0 ? 1 : -1);
+    clearCards();
+    sliding = false;
+  }
+
+  function finishSwipe(drag, commit) {
+    if (!drag.travel) return;
+    const step = drag.travel < 0 ? 1 : -1;
+    if (commit && neighbour(step)) slideTo(step, drag.travel);
+    else settleBack(drag);
+  }
+
   // --- Wiring ---
 
   [['productCam', onProduct], ['productLib', onProduct], ['retakeCam', onRetake], ['retakeLib', onRetake],
@@ -1243,7 +1350,7 @@
   const framedExtra = () => item().extras.find((extra) => extra.id === state.framing && extra.img);
 
   canvas.addEventListener('pointerdown', (e) => {
-    if (!item() || !item().img) return;
+    if (!item() || !item().img || sliding) return;
     const p = canvasPoint(e);
     const framed = framedExtra();
     const added = extraAt(p);
@@ -1256,24 +1363,12 @@
     } else if (name) {
       const b = state.blocks[name];
       state.drag = { name, dx: p.x - b.x, dy: p.y - b.y };
-    } else {
-      state.drag = { pan: { ...item().pan }, start: p, fromX: e.clientX, fromY: e.clientY, mode: null };
+    } else if (state.items.length > 1) {
+      state.drag = { swipe: true, fromX: e.clientX, travel: 0 };   // the photo itself never moves
     }
   });
 
-  function dragPhoto(p) {
-    const { side, x, y } = cropSlack();
-    const toPhoto = side / OUTPUT;
-    const slide = (start, moved, slack) => (slack
-      ? Math.max(0, Math.min(1, start - (moved * toPhoto) / slack))
-      : 0.5);
-    item().pan = {
-      x: slide(state.drag.pan.x, p.x - state.drag.start.x, x),
-      y: slide(state.drag.pan.y, p.y - state.drag.start.y, y),
-    };
-  }
-
-  // Dragging right brings in more of the picture's left side, as with the main photo.
+  // Dragging right brings in more of the picture's left side.
   function dragCrop(p) {
     const { framed, start, crop } = state.drag;
     const shown = shownSide(framed);
@@ -1285,12 +1380,6 @@
       x: slide(crop.x, p.x - start.x, framed.img.naturalWidth - shown),
       y: slide(crop.y, p.y - start.y, framed.img.naturalHeight - shown),
     };
-  }
-
-  // A sideways drag changes item, unless the photo itself can slide sideways.
-  function chooseDragMode(dx, dy) {
-    const swipeable = state.items.length > 1 && !cropSlack().x;
-    return swipeable && Math.abs(dx) > Math.abs(dy) ? 'swipe' : 'pan';
   }
 
   canvas.addEventListener('pointermove', (e) => {
@@ -1305,18 +1394,9 @@
     } else if (drag.name) {
       it.moved[drag.name] = { x: (p.x - drag.dx) / OUTPUT, y: (p.y - drag.dy) / OUTPUT };
     } else {
-      const dx = e.clientX - drag.fromX;
-      const dy = e.clientY - drag.fromY;
-      if (!drag.mode) {
-        if (Math.hypot(dx, dy) < AXIS_PX) return;
-        drag.mode = chooseDragMode(dx, dy);
-      }
-      if (drag.mode === 'swipe') {
-        drag.travel = dx;
-        canvas.style.transform = `translateX(${dx}px)`;
-        return;
-      }
-      dragPhoto(p);
+      drag.travel = e.clientX - drag.fromX;
+      followFinger(drag);
+      return;
     }
     changed();
     render();
@@ -1325,17 +1405,19 @@
   function endDrag() {
     const { drag } = state;
     state.drag = null;
-    canvas.style.transform = '';
-    if (drag && drag.mode === 'swipe' && Math.abs(drag.travel) >= SWIPE_PX) goToItem(drag.travel < 0 ? 1 : -1);
+    if (drag && drag.swipe) finishSwipe(drag, Math.abs(drag.travel) >= SWIPE_PX);
   }
   canvas.addEventListener('pointerup', endDrag);
-  canvas.addEventListener('pointercancel', () => { state.drag = null; canvas.style.transform = ''; });
-  // Stops the page scrolling while a finger drags a block or the photo, or swipes.
+  canvas.addEventListener('pointercancel', () => {
+    const { drag } = state;
+    state.drag = null;
+    if (drag && drag.swipe) finishSwipe(drag, false);
+  });
+  // Stops the page scrolling while a finger drags a block. Elsewhere on the photo it scrolls as usual.
   canvas.addEventListener('touchstart', (e) => {
     if (!item() || !item().img) return;
-    const { x, y } = cropSlack();
     const p = canvasPoint(e.touches[0]);
-    if (x || y || state.items.length > 1 || state.framing || extraAt(p) || blockAt(p)) e.preventDefault();
+    if (state.framing || extraAt(p) || blockAt(p)) e.preventDefault();
   }, { passive: false });
 
   // Swiping anywhere else on the form also changes item. Inputs keep their own
@@ -1351,19 +1433,18 @@
     const dx = end.clientX - swipeStart.clientX;
     const dy = end.clientY - swipeStart.clientY;
     swipeStart = null;
-    if (Math.abs(dx) >= SWIPE_PX && Math.abs(dx) > Math.abs(dy) * 2) goToItem(dx < 0 ? 1 : -1);
+    if (Math.abs(dx) >= SWIPE_PX && Math.abs(dx) > Math.abs(dy) * 2) slideTo(dx < 0 ? 1 : -1);
   }, { passive: true });
 
   // iOS can stop the app at any moment once it leaves the screen.
   document.addEventListener('visibilitychange', () => { if (document.hidden) flushSaves(); });
   window.addEventListener('pagehide', flushSaves);
 
-  $('earlierBtn').addEventListener('click', () => goToItem(-1));
-  $('laterBtn').addEventListener('click', () => goToItem(1));
+  $('earlierBtn').addEventListener('click', () => slideTo(-1));
+  $('laterBtn').addEventListener('click', () => slideTo(1));
 
   $('resetPosBtn').addEventListener('click', () => {
     item().moved = emptyMoved();
-    item().pan = { x: 0.5, y: 0.5 };
     item().extras.forEach((extra, i) => { extra.at = startPoint(i); });
     changed();
     render();

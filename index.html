@@ -2,7 +2,8 @@
 <html lang="th">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- maximum-scale stops iPhone zooming in on inputs smaller than 16px; pinch zoom still works there. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <title>ติดราคา</title>
   <meta name="description" content="ใส่ราคา รหัส และไซส์ลงบนรูปสินค้า แล้วส่งเข้า LINE">
   <meta name="theme-color" content="#0b7a4b">
@@ -19,7 +20,8 @@
   <header class="top">
     <button id="backBtn" class="link back" type="button" hidden>‹ ย้อนกลับ</button>
     <h1 id="title">ติดราคา</h1>
-    <button id="nextBtn" class="link next" type="button" hidden>ชิ้นถัดไป</button>
+    <button id="nextBtn" class="next" type="button" hidden>ชิ้นถัดไป +</button>
+    <div id="steps" class="steps" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
   </header>
 
   <aside id="installHint" class="hint" hidden>
@@ -35,23 +37,29 @@
 
     <section id="screenBrand" aria-label="เลือกแบรนด์">
       <h2>เลือกแบรนด์</h2>
+      <p class="lead">แตะแบรนด์ของสินค้าเพื่อเริ่มทำรูป</p>
       <div id="brandGrid" class="brand-grid"></div>
     </section>
 
     <section id="screenPhoto" aria-label="ถ่ายรูปสินค้า" hidden>
       <h2>ถ่ายรูปสินค้า</h2>
+      <p class="lead">วางสินค้าไว้กลางภาพ แอปจะตัดกึ่งกลางเป็น 1080 × 1080 ให้เอง</p>
       <label class="drop">
         <input id="productCam" type="file" accept="image/*" capture="environment">
+        <svg class="corners" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M2 16V2h14M84 2h14v14M98 84v14H84M16 98H2V84"/></svg>
+        <svg class="icon big" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13.5" r="3.5"/></svg>
         <span class="drop-label">แตะเพื่อถ่ายรูป</span>
       </label>
-      <label class="lib">
-        <input id="productLib" type="file" accept="image/*">เลือกจากคลังรูป
+      <label class="tool lib">
+        <input id="productLib" type="file" accept="image/*">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m4 18 5-5 4 4 3-3 4 4"/></svg>
+        เลือกจากคลังรูป
       </label>
     </section>
 
     <section id="screenCategory" aria-label="เลือกหมวดสินค้า" hidden>
       <img id="categoryThumb" class="thumb" alt="รูปสินค้า">
-      <h2>เลือกหมวดสินค้า</h2>
+      <h2 class="center">เลือกหมวดสินค้า</h2>
       <div id="categoryGrid" class="category-grid"></div>
     </section>
 
@@ -61,62 +69,20 @@
         <span id="itemLabel"></span>
         <button id="laterBtn" type="button" aria-label="ชิ้นต่อไปในรายการ">›</button>
       </div>
-      <canvas id="canvas" width="1080" height="1080"></canvas>
+      <div id="stage" class="stage">
+        <div class="slides">
+          <canvas id="peek" width="1080" height="1080" aria-hidden="true" hidden></canvas>
+          <canvas id="canvas" width="1080" height="1080"></canvas>
+        </div>
+      </div>
       <div class="move-row">
-        <span>ลากกล่องเพื่อย้าย ลากรูปเพื่อขยับสินค้า</span>
+        <span>ลากกล่องเพื่อย้ายตำแหน่ง</span>
         <button id="resetPosBtn" class="link" type="button">คืนตำแหน่งเดิม</button>
       </div>
 
-      <div class="retake" role="group" aria-label="แก้ไขรูปภาพ">
+      <div class="retake" role="group" aria-label="เปลี่ยนรูปสินค้า">
         <label class="tool"><input id="retakeCam" type="file" accept="image/*" capture="environment">ถ่ายรูปใหม่</label>
         <label class="tool"><input id="retakeLib" type="file" accept="image/*">เลือกรูปใหม่จากคลัง</label>
-      </div>
-
-      <div class="panel">
-        <label class="field">
-          <span>ราคาขาย</span>
-          <input id="price" inputmode="decimal" autocomplete="off" placeholder="เช่น 1790">
-        </label>
-        <label class="field">
-          <span>ราคาปกติ</span>
-          <input id="fullPrice" inputmode="decimal" autocomplete="off" placeholder="เช่น 4300">
-        </label>
-        <label class="field">
-          <span>รหัสสินค้า</span>
-          <input id="code" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="เช่น JQ7824">
-        </label>
-      </div>
-
-      <div id="sizePanel" class="panel" hidden>
-        <div class="size-head">
-          <h2>ไซส์ที่มี</h2>
-          <div id="sizeBulk">
-            <button id="allSizesBtn" class="link" type="button">เลือกทั้งหมด</button>
-            <button id="noSizesBtn" class="link" type="button">ล้าง</button>
-          </div>
-        </div>
-        <div id="chartForm"></div>
-        <div id="sizeGrid" class="size-grid"></div>
-        <div id="sizeScaleRow"></div>
-      </div>
-
-      <div class="panel">
-        <div class="size-head">
-          <h2>ข้อความเพิ่มเติม</h2>
-        </div>
-        <div id="textList"></div>
-        <button id="addTextBtn" class="tool add" type="button">เพิ่มข้อความ</button>
-      </div>
-
-      <div class="panel">
-        <div class="size-head">
-          <h2>ภาพเพิ่มเติม</h2>
-        </div>
-        <div id="imageList"></div>
-        <div class="retake" role="group" aria-label="เพิ่มภาพ">
-          <label class="tool"><input id="extraCam" type="file" accept="image/*" capture="environment">ถ่ายภาพเพิ่ม</label>
-          <label class="tool"><input id="extraLib" type="file" accept="image/*">เลือกจากคลัง</label>
-        </div>
       </div>
 
       <details class="panel more">
@@ -153,6 +119,59 @@
           </div>
         </div>
       </details>
+
+      <div class="panel">
+        <div class="size-head">
+          <h2>รายละเอียดสินค้า</h2>
+        </div>
+        <div class="fields">
+          <label class="field wide">
+            <span>ราคาขาย</span>
+            <input id="price" class="main-price" inputmode="decimal" autocomplete="off" placeholder="เช่น 1790">
+          </label>
+          <label class="field">
+            <span>ราคาปกติ</span>
+            <input id="fullPrice" inputmode="decimal" autocomplete="off" placeholder="เช่น 4300">
+          </label>
+          <label class="field">
+            <span>รหัสสินค้า</span>
+            <input id="code" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="เช่น JQ7824">
+          </label>
+        </div>
+      </div>
+
+      <div id="sizePanel" class="panel" hidden>
+        <div class="size-head">
+          <h2>ไซส์ที่มี</h2>
+          <div id="sizeBulk">
+            <button id="allSizesBtn" class="link" type="button">เลือกทั้งหมด</button>
+            <button id="noSizesBtn" class="link" type="button">ล้าง</button>
+          </div>
+        </div>
+        <div id="chartForm"></div>
+        <div id="sizeGrid" class="size-grid"></div>
+        <div id="sizeScaleRow"></div>
+      </div>
+
+      <div class="panel">
+        <div class="size-head">
+          <h2>ข้อความเพิ่มเติม</h2>
+        </div>
+        <div id="textList"></div>
+        <button id="addTextBtn" class="tool add" type="button">เพิ่มข้อความ</button>
+      </div>
+
+      <div class="panel">
+        <div class="size-head">
+          <h2>ภาพเพิ่มเติม</h2>
+        </div>
+        <div id="imageList"></div>
+        <div class="retake" role="group" aria-label="เพิ่มภาพ">
+          <label class="tool"><input id="extraCam" type="file" accept="image/*" capture="environment">ถ่ายภาพเพิ่ม</label>
+          <label class="tool"><input id="extraLib" type="file" accept="image/*">เลือกจากคลัง</label>
+        </div>
+      </div>
+
     </section>
   </main>
 

@@ -28,12 +28,12 @@
   // layout: 'table' = small left-aligned rows, 'list' = large centred rows.
   // bottom: lower edge of the size box on the 1080px photo.
   const ADIDAS_CATEGORIES = [
-    { id: 'sneakers', name: 'รองเท้าผ้าใบ', sizes: SNEAKER_SIZES, layout: 'table', bottom: 1032 },
-    { id: 'sandals', name: 'รองเท้าแตะ', sizes: SANDAL_SIZES, layout: 'table', bottom: 1032 },
-    { id: 'clothes', name: 'เสื้อผ้า', sizes: [], sizeChart: CLOTHES_CHART, layout: 'list', bottom: 982 },
-    { id: 'socks', name: 'ถุงเท้า', sizes: SOCK_SIZES, layout: 'list', bottom: 1032 },
-    { id: 'bags', name: 'กระเป๋า', sizes: [] },
-    { id: 'hats', name: 'หมวก', sizes: [] },
+    { id: 'sneakers', name: 'รองเท้าผ้าใบ', icon: '👟', sizes: SNEAKER_SIZES, layout: 'table', bottom: 1032 },
+    { id: 'sandals', name: 'รองเท้าแตะ', icon: '🩴', sizes: SANDAL_SIZES, layout: 'table', bottom: 1032 },
+    { id: 'clothes', name: 'เสื้อผ้า', icon: '👕', sizes: [], sizeChart: CLOTHES_CHART, layout: 'list', bottom: 982 },
+    { id: 'socks', name: 'ถุงเท้า', icon: '🧦', sizes: SOCK_SIZES, layout: 'list', bottom: 1032 },
+    { id: 'bags', name: 'กระเป๋า', icon: '🎒', sizes: [] },
+    { id: 'hats', name: 'หมวก', icon: '🧢', sizes: [] },
   ];
 
   const BRANDS = [

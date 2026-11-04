@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>ติดราคา</title>
+  <meta name="description" content="ใส่ราคา รหัส และไซส์ลงบนรูปสินค้า แล้วส่งเข้า LINE">
+  <meta name="theme-color" content="#0b7a4b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ติดราคา">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <button id="backBtn" class="link back" type="button" hidden>‹ ย้อนกลับ</button>
+    <h1 id="title">ติดราคา</h1>
+    <button id="nextBtn" class="link next" type="button" hidden>ชิ้นถัดไป</button>
+  </header>
+
+  <aside id="installHint" class="hint" hidden>
+    <div>
+      <strong>ติดตั้งลงเครื่อง</strong>
+      <p>เปิดหน้านี้ใน Safari แตะปุ่มแชร์ แล้วเลือก “เพิ่มไปยังหน้าจอโฮม”</p>
+    </div>
+    <button id="installClose" class="link" type="button">ปิด</button>
+  </aside>
+
+  <main>
+    <p id="status" class="status" role="status" hidden></p>
+
+    <section id="screenBrand" aria-label="เลือกแบรนด์">
+      <h2>เลือกแบรนด์</h2>
+      <div id="brandGrid" class="brand-grid"></div>
+    </section>
+
+    <section id="screenPhoto" aria-label="ถ่ายรูปสินค้า" hidden>
+      <h2>ถ่ายรูปสินค้า</h2>
+      <label class="drop">
+        <input id="productCam" type="file" accept="image/*" capture="environment">
+        <span class="drop-label">แตะเพื่อถ่ายรูป</span>
+      </label>
+      <label class="lib">
+        <input id="productLib" type="file" accept="image/*">เลือกจากคลังรูป
+      </label>
+    </section>
+
+    <section id="screenCategory" aria-label="เลือกหมวดสินค้า" hidden>
+      <img id="categoryThumb" class="thumb" alt="รูปสินค้า">
+      <h2>เลือกหมวดสินค้า</h2>
+      <div id="categoryGrid" class="category-grid"></div>
+    </section>
+
+    <section id="screenForm" aria-label="ข้อมูลสินค้า" hidden>
+      <div id="itemNav" class="item-nav" hidden>
+        <button id="earlierBtn" type="button" aria-label="ชิ้นก่อนหน้า">‹</button>
+        <span id="itemLabel"></span>
+        <button id="laterBtn" type="button" aria-label="ชิ้นต่อไปในรายการ">›</button>
+      </div>
+      <canvas id="canvas" width="1080" height="1080"></canvas>
+      <div class="move-row">
+        <span>ลากกล่องเพื่อย้าย ลากรูปเพื่อขยับสินค้า</span>
+        <button id="resetPosBtn" class="link" type="button">คืนตำแหน่งเดิม</button>
+      </div>
+
+      <div class="retake" role="group" aria-label="แก้ไขรูปภาพ">
+        <label class="tool"><input id="retakeCam" type="file" accept="image/*" capture="environment">ถ่ายรูปใหม่</label>
+        <label class="tool"><input id="retakeLib" type="file" accept="image/*">เลือกรูปใหม่จากคลัง</label>
+      </div>
+
+      <div class="panel">
+        <label class="field">
+          <span>ราคาขาย</span>
+          <input id="price" inputmode="decimal" autocomplete="off" placeholder="เช่น 1790">
+        </label>
+        <label class="field">
+          <span>ราคาปกติ</span>
+          <input id="fullPrice" inputmode="decimal" autocomplete="off" placeholder="เช่น 4300">
+        </label>
+        <label class="field">
+          <span>รหัสสินค้า</span>
+          <input id="code" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="เช่น JQ7824">
+        </label>
+      </div>
+
+      <div id="sizePanel" class="panel" hidden>
+        <div class="size-head">
+          <h2>ไซส์ที่มี</h2>
+          <div>
+            <button id="allSizesBtn" class="link" type="button">เลือกทั้งหมด</button>
+            <button id="noSizesBtn" class="link" type="button">ล้าง</button>
+          </div>
+        </div>
+        <div id="sizeGrid" class="size-grid"></div>
+      </div>
+
+      <details class="panel more">
+        <summary>ปรับสีและขนาด</summary>
+        <div class="opt" role="group" aria-label="ขนาด">
+          <span>ขนาด</span>
+          <div class="seg" data-opt="size">
+            <button type="button" data-v="s">เล็ก</button>
+            <button type="button" data-v="m">กลาง</button>
+            <button type="button" data-v="l">ใหญ่</button>
+          </div>
+        </div>
+        <div class="opt" role="group" aria-label="สีกล่องราคา">
+          <span>สีกล่องราคา</span>
+          <div class="seg" data-opt="box">
+            <button type="button" data-v="red">แดง</button>
+            <button type="button" data-v="black">ดำ</button>
+            <button type="button" data-v="yellow">เหลือง</button>
+            <button type="button" data-v="white">ขาว</button>
+          </div>
+        </div>
+        <div class="opt" role="group" aria-label="สีตัวเลขราคา">
+          <span>สีตัวเลขราคา</span>
+          <div class="seg" data-opt="text">
+            <button type="button" data-v="white">ขาว</button>
+            <button type="button" data-v="black">ดำ</button>
+            <button type="button" data-v="yellow">เหลือง</button>
+            <button type="button" data-v="red">แดง</button>
+          </div>
+        </div>
+        <div class="opt" role="group" aria-label="สีตัวหนังสือในกล่องดำ">
+          <span>สีตัวหนังสือกล่องดำ</span>
+          <div class="seg" data-opt="subText">
+            <button type="button" data-v="white">ขาว</button>
+            <button type="button" data-v="yellow">เหลือง</button>
+            <button type="button" data-v="red">แดง</button>
+          </div>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <footer id="sendBar" class="bar" hidden>
+    <p id="sendNote" class="send-note" hidden></p>
+    <button id="sendBtn" class="send" type="button" disabled>ส่งเข้า LINE</button>
+  </footer>
+
+  <script src="catalog.js"></script>
+  <script src="store.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

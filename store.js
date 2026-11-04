@@ -54,5 +54,16 @@
     tx.objectStore(PHOTOS).delete(id);
   });
 
-  root.Store = { loadItems, saveItems, savePhoto, loadPhoto, removeItem };
+  const removePhoto = (key) => transact(PHOTOS, 'readwrite', (tx) => { tx.objectStore(PHOTOS).delete(key); });
+
+  // Clears photos left behind if the app was stopped before their item was saved.
+  async function prunePhotos(keep) {
+    const keys = await transact(PHOTOS, 'readonly', (tx) => tx.objectStore(PHOTOS).getAllKeys());
+    const stale = keys.filter((key) => !keep.has(key));
+    if (stale.length) {
+      await transact(PHOTOS, 'readwrite', (tx) => stale.forEach((key) => tx.objectStore(PHOTOS).delete(key)));
+    }
+  }
+
+  root.Store = { loadItems, saveItems, savePhoto, loadPhoto, removeItem, removePhoto, prunePhotos };
 })(globalThis);

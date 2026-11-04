@@ -1,5 +1,5 @@
 // Bump VERSION whenever any file changes so phones pick up the new app.
-const VERSION = 'tag-v16';
+const VERSION = 'tag-v27';
 const FILES = [
   './',
   'index.html',

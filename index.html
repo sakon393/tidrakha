@@ -90,24 +90,42 @@
       <div id="sizePanel" class="panel" hidden>
         <div class="size-head">
           <h2>ไซส์ที่มี</h2>
-          <div>
+          <div id="sizeBulk">
             <button id="allSizesBtn" class="link" type="button">เลือกทั้งหมด</button>
             <button id="noSizesBtn" class="link" type="button">ล้าง</button>
           </div>
         </div>
+        <div id="chartForm"></div>
         <div id="sizeGrid" class="size-grid"></div>
+        <div id="sizeScaleRow"></div>
+      </div>
+
+      <div class="panel">
+        <div class="size-head">
+          <h2>ข้อความเพิ่มเติม</h2>
+        </div>
+        <div id="textList"></div>
+        <button id="addTextBtn" class="tool add" type="button">เพิ่มข้อความ</button>
+      </div>
+
+      <div class="panel">
+        <div class="size-head">
+          <h2>ภาพเพิ่มเติม</h2>
+        </div>
+        <div id="imageList"></div>
+        <div class="retake" role="group" aria-label="เพิ่มภาพ">
+          <label class="tool"><input id="extraCam" type="file" accept="image/*" capture="environment">ถ่ายภาพเพิ่ม</label>
+          <label class="tool"><input id="extraLib" type="file" accept="image/*">เลือกจากคลัง</label>
+        </div>
       </div>
 
       <details class="panel more">
         <summary>ปรับสีและขนาด</summary>
-        <div class="opt" role="group" aria-label="ขนาด">
+        <label class="opt">
           <span>ขนาด</span>
-          <div class="seg" data-opt="size">
-            <button type="button" data-v="s">เล็ก</button>
-            <button type="button" data-v="m">กลาง</button>
-            <button type="button" data-v="l">ใหญ่</button>
-          </div>
-        </div>
+          <input id="scaleRange" type="range" min="50" max="200">
+          <output id="scaleValue"></output>
+        </label>
         <div class="opt" role="group" aria-label="สีกล่องราคา">
           <span>สีกล่องราคา</span>
           <div class="seg" data-opt="box">

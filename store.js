@@ -54,6 +54,11 @@
     tx.objectStore(PHOTOS).delete(id);
   });
 
+  const clearAll = () => transact([ITEMS, PHOTOS], 'readwrite', (tx) => {
+    tx.objectStore(ITEMS).clear();
+    tx.objectStore(PHOTOS).clear();
+  });
+
   const removePhoto = (key) => transact(PHOTOS, 'readwrite', (tx) => { tx.objectStore(PHOTOS).delete(key); });
 
   // Clears photos left behind if the app was stopped before their item was saved.
@@ -65,5 +70,5 @@
     }
   }
 
-  root.Store = { loadItems, saveItems, savePhoto, loadPhoto, removeItem, removePhoto, prunePhotos };
+  root.Store = { loadItems, saveItems, savePhoto, loadPhoto, removeItem, removePhoto, prunePhotos, clearAll };
 })(globalThis);

@@ -7,6 +7,7 @@
   const PHOTO_EDGE = 1440;          // short edge of a stored photo; keeps the phone's storage from filling up
   const SAVE_DELAY = 300;
   const SESSION_KEY = 'tag-session-v1';
+  const RUNNING_KEY = 'tag-running-v1';
   const CUSTOM_SIZE_CHARS = 1000;   // keeps typing and drawing quick on the phone
   const LIST_PX = 35;               // size list text and row height, from the sample images
   const LIST_ROW = 55;
@@ -1388,9 +1389,25 @@
   paintScale();
   buildBrands();
 
-  // Reopening the app carries on from the item left on screen.
+  // sessionStorage ends with the app, so an empty one means it was swiped away.
+  // A reload or a brief stop by iOS keeps it. If it cannot be read, keep the work.
+  function isFreshLaunch() {
+    try {
+      const running = sessionStorage.getItem(RUNNING_KEY);
+      sessionStorage.setItem(RUNNING_KEY, '1');
+      return !running;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // A fresh launch starts empty on the brand screen. Otherwise carry on from the item left on screen.
   async function restore() {
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    if (isFreshLaunch()) {
+      Store.clearAll().catch(saveFailed);
+      return;
+    }
     let records;
     try {
       records = await Store.loadItems();

@@ -456,6 +456,7 @@
     const it = newItem(nextId(), state.brand.id, state.lastCategory);
     if (item()) {
       it.chart.kind = item().chart.kind;
+      it.chart.step = item().chart.step;
       it.sizeScale = item().sizeScale;
     }
     Object.assign(it, { img, url });
@@ -594,8 +595,13 @@
     return repeated ? `${repeated[1].length}X${repeated[2]}` : text;
   }
 
+  // PUMA tops can go up 4 per size instead of 2.
+  const canPickStep = (it) => it.brandId === 'puma' && it.chart.kind === 'top';
+  const chartStep = (it) => (canPickStep(it) && it.chart.step === 4 ? 4 : it.category.sizeChart.step);
+
   function chartRows(it) {
-    const { names, step, kinds } = it.category.sizeChart;
+    const { names, kinds } = it.category.sizeChart;
+    const step = chartStep(it);
     const base = Number(it.chart.value);
     const start = names.indexOf(chartName(it.chart.size));
     if (start < 0 || !it.chart.value.trim() || !Number.isFinite(base)) return [];
@@ -661,6 +667,15 @@
     }
     const fields = box.appendChild(make('div', 'chart-fields'));
     const hint = make('p', 'chart-hint', chartHint(it));
+    // Shown once a size and measurement are typed.
+    const stepRow = canPickStep(it)
+      ? optionRow('เพิ่มทีละ', [[2, '+2'], [4, '+4']], chartStep(it), (step) => {
+        it.chart.step = step;
+        sizesChanged();
+        buildSizeButtons();
+      })
+      : null;
+    const showStep = () => { if (stepRow) stepRow.hidden = !chartRows(it).length; };
     const field = (label, key, attrs) => {
       const wrap = fields.appendChild(make('label', 'field'));
       wrap.appendChild(make('span', '', label));
@@ -669,12 +684,15 @@
       input.addEventListener('input', () => {
         it.chart[key] = input.value;
         hint.textContent = chartHint(it);
+        showStep();
         sizesChanged();
         buildSizeButtons();
       });
     };
     field('ไซส์', 'size', { placeholder: 'เช่น S', autocapitalize: 'characters', spellcheck: false });
     field(chart.kinds[it.chart.kind].word, 'value', { placeholder: 'เช่น 30', inputMode: 'decimal' });
+    if (stepRow) box.appendChild(stepRow);
+    showStep();
     box.appendChild(hint);
   }
 

@@ -96,6 +96,121 @@
     statusEl.classList.toggle('warn', !!warn);
   }
 
+  // --- PUMA stock files: which sizes each product code has in stock ---
+  // Kept in localStorage, so they stay when the app is swiped away (unlike unsent work).
+
+  const STOCK_KEY = 'tag-stock-v1';
+  const STOCK_SLOTS = { ftw: 'FTW', app: 'APP' };
+  let stockFiles = {};      // { ftw: { name, count, stock: { sku: [sizes] } }, app: ... }
+
+  function loadStockFiles() {
+    try { stockFiles = JSON.parse(localStorage.getItem(STOCK_KEY)) || {}; } catch (e) { stockFiles = {}; }
+  }
+  function saveStockFiles() {
+    try { localStorage.setItem(STOCK_KEY, JSON.stringify(stockFiles)); return true; } catch (e) { return false; }
+  }
+
+  function stockSlot(it) {
+    if (!it || it.brandId !== 'puma' || !it.category) return null;
+    if (it.category.id === 'clothes') return 'app';
+    if (it.category.id === 'sneakers' || it.category.id === 'sandals') return 'ftw';
+    return null;
+  }
+
+  function paintStockFiles() {
+    $('stockPanel').hidden = !state.brand || state.brand.id !== 'puma';
+    Object.keys(STOCK_SLOTS).forEach((slot) => {
+      const file = stockFiles[slot];
+      $(`${slot}Info`).textContent = file ? `${file.name} · ${file.count} รหัส` : 'ยังไม่ได้ใส่ไฟล์';
+      $(`${slot}Btn`).textContent = file ? 'เปลี่ยนไฟล์' : 'เพิ่มไฟล์';
+    });
+  }
+
+  async function onStockFile(slot, file) {
+    if (!file) return;
+    const name = STOCK_SLOTS[slot];
+    setStatus(`กำลังอ่านไฟล์ ${name}…`);
+    let result;
+    try {
+      result = await Stock.readStockPdf(file);
+    } catch (e) {
+      setStatus(`อ่านไฟล์ ${name} ไม่ได้ ต้องเป็นไฟล์ PDF รายงานสต็อกของ PUMA`, true);
+      return;
+    }
+    const count = Object.keys(result.stock).length;
+    if (result.division && result.division !== name && STOCK_SLOTS[result.division.toLowerCase()]) {
+      setStatus(`ไฟล์นี้เป็นไฟล์ ${result.division} ไม่ใช่ ${name} ให้ใส่ในช่อง ${result.division}`, true);
+      return;
+    }
+    if (!count) {
+      setStatus(`ไม่พบรหัสสินค้าในไฟล์นี้ ต้องเป็นไฟล์ PDF รายงานสต็อกของ PUMA`, true);
+      return;
+    }
+    stockFiles[slot] = { name: file.name, count, stock: result.stock };
+    const kept = saveStockFiles();
+    paintStockFiles();
+    if (kept) setStatus(`ใส่ไฟล์ ${name} แล้ว พบ ${count} รหัส`);
+    else setStatus(`ใส่ไฟล์ ${name} แล้ว (${count} รหัส) แต่เก็บลงเครื่องไม่ได้ ปิดแอปแล้วต้องใส่ใหม่`, true);
+  }
+
+  const ukOf = (label) => {
+    const m = label.match(/^UK\s*([\d.]+)/i);
+    return m ? Number(m[1]) : NaN;
+  };
+  const bySize = (a, b) => (Number(a) - Number(b)) || a.localeCompare(b);
+
+  // What the stock file says about the typed code, or null when there is nothing to say.
+  function stockMatch(it) {
+    const slot = stockSlot(it);
+    const key = Stock.skuKey(it.code);
+    if (!slot || key.length < 8) return null;
+    const name = STOCK_SLOTS[slot];
+    const file = stockFiles[slot];
+    if (!file) return { text: `ยังไม่ได้ใส่ไฟล์ ${name} ใส่ได้ที่หน้าถ่ายรูป` };
+    const found = file.stock[key];
+    if (!found) return { text: `ไม่พบรหัส ${key} ในไฟล์ ${name}` };
+    const keys = [];
+    const missing = [];
+    found.forEach((size) => {
+      const match = slot === 'ftw'
+        ? it.category.sizes.find((label) => ukOf(label) === Number(size))
+        : it.category.sizeChart.names.find((n) => n === chartName(size));
+      if (!match) missing.push(size);
+      else if (!keys.includes(match)) keys.push(match);
+    });
+    return { key, keys, missing: missing.sort(bySize), all: [...found].sort(bySize), name, slot };
+  }
+
+  function stockText(it, m) {
+    if (m.text) return m.text;
+    if (isCustom(it)) return `ไฟล์ ${m.name} มีไซส์ ${m.all.join(', ')} (ไซส์พิเศษต้องพิมพ์เอง)`;
+    let text = `พบรหัสในไฟล์ ${m.name} เลือกไซส์ที่มี ${m.keys.length} ไซส์ให้แล้ว`;
+    if (m.missing.length) text += ` · ไซส์ที่ไม่มีในตาราง: ${m.missing.join(', ')}`;
+    if (m.slot === 'app' && m.keys.length && !sizeRows(it).length) text += ' · กรอกไซส์และอก/เอวด้านล่างเพื่อให้ไซส์ขึ้นบนรูป';
+    return text;
+  }
+
+  function paintCodeHint(it, m) {
+    const hint = $('codeHint');
+    hint.hidden = !m;
+    if (!m) return;
+    hint.textContent = stockText(it, m);
+    hint.classList.toggle('found', !!m.keys);
+  }
+
+  // Picks the sizes from the file once per code, so later taps on sizes are not undone while typing.
+  function applyStock(it) {
+    const m = stockMatch(it);
+    if (m && m.keys && !isCustom(it) && it.stockKey !== m.key) {
+      it.sizes = new Set(m.keys);
+      it.stockKey = m.key;
+      if (it.category.sizeChart) buildSizeButtons();
+      else paintSizes();
+    }
+    if (!m || !m.keys) it.stockKey = null;
+    paintCodeHint(it, m);
+  }
+
   // --- Keeping items on the phone ---
 
   const withoutImage = ({ img, url, photo, loading, ...kept }) => kept;
@@ -241,6 +356,7 @@
     $('title').textContent = state.brand && screen !== 'screenBrand' ? state.brand.name : 'ติดราคา';
     [...$('steps').children].forEach((bar, i) => bar.classList.toggle('on', i <= SCREENS.indexOf(screen)));
     setStatus('');
+    if (screen === 'screenPhoto') paintStockFiles();
     scrollTo(0, 0);
   }
 
@@ -408,6 +524,7 @@
     state.framing = null;
     buildSizes();
     buildExtras();
+    paintCodeHint(it, stockMatch(it));
     show('screenForm');
     renderNav();
     saveSession();
@@ -1276,8 +1393,17 @@
   [[priceInput, 'price'], [fullInput, 'full'], [codeInput, 'code']].forEach(([input, key]) => {
     input.addEventListener('input', () => {
       item()[key] = input.value;
+      if (key === 'code') applyStock(item());
       changed();
       render();
+    });
+  });
+
+  [['ftwFile', 'ftw'], ['appFile', 'app']].forEach(([id, slot]) => {
+    $(id).addEventListener('change', () => {
+      const file = $(id).files[0];
+      $(id).value = '';     // lets the same file be picked again after it changes
+      onStockFile(slot, file);
     });
   });
 
@@ -1466,6 +1592,7 @@
   });
 
   loadPrefs();
+  loadStockFiles();
   document.querySelectorAll('.seg').forEach((seg) => seg.paint());
   paintScale();
   buildBrands();

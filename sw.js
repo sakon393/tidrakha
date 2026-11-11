@@ -1,12 +1,15 @@
 // Bump VERSION whenever any file changes so phones pick up the new app.
-const VERSION = 'tag-v32';
+const VERSION = 'tag-v35';
 const FILES = [
   './',
   'index.html',
   'style.css',
   'catalog.js',
   'store.js',
+  'stock.js',
   'app.js',
+  'lib/pdf.min.js',
+  'lib/pdf.worker.min.js',
   'manifest.webmanifest',
   'icons/icon-180.png',
   'icons/icon-192.png',

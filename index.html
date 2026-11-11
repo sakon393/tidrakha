@@ -55,6 +55,20 @@
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m4 18 5-5 4 4 3-3 4 4"/></svg>
         เลือกจากคลังรูป
       </label>
+      <div id="stockPanel" class="panel" hidden>
+        <div class="size-head">
+          <h2>ไฟล์สต็อก PUMA</h2>
+        </div>
+        <p class="chart-hint">ใส่ไฟล์ PDF ไว้ แล้วเวลาพิมพ์รหัสสินค้า แอปจะเลือกไซส์ที่มีในไฟล์ให้เอง</p>
+        <div class="stock-row">
+          <div class="stock-name"><b>FTW (รองเท้า)</b><small id="ftwInfo"></small></div>
+          <label class="tool"><input id="ftwFile" type="file" accept="application/pdf,.pdf"><span id="ftwBtn">เพิ่มไฟล์</span></label>
+        </div>
+        <div class="stock-row">
+          <div class="stock-name"><b>APP (เสื้อผ้า)</b><small id="appInfo"></small></div>
+          <label class="tool"><input id="appFile" type="file" accept="application/pdf,.pdf"><span id="appBtn">เพิ่มไฟล์</span></label>
+        </div>
+      </div>
     </section>
 
     <section id="screenCategory" aria-label="เลือกหมวดสินค้า" hidden>
@@ -138,6 +152,7 @@
             <input id="code" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="เช่น JQ7824">
           </label>
         </div>
+        <p id="codeHint" class="chart-hint" hidden></p>
       </div>
 
       <div id="sizePanel" class="panel" hidden>
@@ -182,6 +197,7 @@
 
   <script src="catalog.js"></script>
   <script src="store.js"></script>
+  <script src="stock.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

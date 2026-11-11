@@ -36,9 +36,23 @@
     { id: 'hats', name: 'หมวก', icon: '🧢', sizes: [] },
   ];
 
+  const PUMA_SANDAL_SIZES = [
+    'UK3 EU36 CM22', 'UK4 EU37 CM23', 'UK5 EU38 CM24', 'UK6 EU39 CM25', 'UK7 EU40.5 CM26',
+    'UK8 EU42 CM27', 'UK9 EU43 CM28', 'UK10 EU44.5 CM29', 'UK11 EU46 CM30', 'UK12 EU47 CM31',
+  ];
+  const PUMA_SHOE_SIZES = [
+    'UK3 | 35.5 | 22CM', 'UK3.5 | 36 | 22.5CM', 'UK4 | 37 | 23CM', 'UK4.5 | 37.5 | 23.5CM',
+    'UK5 | 38 | 24CM', 'UK5.5 | 38.5 | 24.5CM', 'UK6 | 39 | 25CM', 'UK6.5 | 40 | 25.5CM',
+    'UK7 | 40.5 | 26CM', 'UK7.5 | 41 | 26.5CM', 'UK8 | 42 | 27CM', 'UK8.5 | 42.5 | 27.5CM',
+    'UK9 | 43 | 28CM', 'UK9.5 | 44 | 28.5CM', 'UK10 | 44.5 | 29CM', 'UK10.5 | 45 | 29.5CM',
+    'UK11 | 46 | 30CM', 'UK11.5 | 46.5 | 30.5CM', 'UK12 | 47 | 31CM',
+  ];
+  const PUMA_SIZES = { sneakers: PUMA_SHOE_SIZES, sandals: PUMA_SANDAL_SIZES };
+  const PUMA_CATEGORIES = ADIDAS_CATEGORIES.map((c) => (PUMA_SIZES[c.id] ? { ...c, sizes: PUMA_SIZES[c.id] } : c));
+
   const BRANDS = [
     { id: 'adidas', name: 'adidas', categories: ADIDAS_CATEGORIES },
-    { id: 'puma', name: 'PUMA', categories: null },
+    { id: 'puma', name: 'PUMA', categories: PUMA_CATEGORIES },
     { id: 'nike', name: 'NIKE', categories: null },
     { id: 'ccoo', name: 'CCOO', categories: null },
   ];

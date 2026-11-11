@@ -65,9 +65,9 @@
     if (!loading) {
       loading = new Promise((resolve, reject) => {
         const script = document.createElement('script');
-        script.src = 'lib/pdf.min.js';
+        script.src = 'pdf.min.js';
         script.onload = () => {
-          root.pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';
+          root.pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js';
           resolve(root.pdfjsLib);
         };
         script.onerror = () => { loading = null; reject(new Error('pdf.js missing')); };

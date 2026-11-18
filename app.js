@@ -348,6 +348,7 @@
 
   function show(screen) {
     state.screen = screen;
+    document.body.dataset.screen = screen;   // the brand screen fits the phone without scrolling
     SCREENS.forEach((id) => { $(id).hidden = id !== screen; });
     const onForm = screen === 'screenForm';
     $('backBtn').hidden = screen === 'screenBrand';
@@ -382,6 +383,15 @@
       btn.className = `brand brand-${brand.id}`;
       btn.disabled = !brand.categories;
       btn.innerHTML = '<b></b><small></small>';
+      if (brand.logo) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('class', 'brand-logo');
+        svg.setAttribute('aria-hidden', 'true');
+        const path = svg.appendChild(document.createElementNS('http://www.w3.org/2000/svg', 'path'));
+        path.setAttribute('d', brand.logo);
+        btn.prepend(svg);
+      }
       btn.querySelector('b').textContent = brand.name;
       btn.querySelector('small').textContent = brand.categories ? 'เริ่มทำรูป ›' : 'เร็ว ๆ นี้';
       btn.addEventListener('click', () => chooseBrand(brand));

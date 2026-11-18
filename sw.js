@@ -1,5 +1,5 @@
 // Bump VERSION whenever any file changes so phones pick up the new app.
-const VERSION = 'tag-v43';
+const VERSION = 'tag-v44';
 const FILES = [
   './',
   'index.html',
@@ -18,7 +18,10 @@ const FILES = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(VERSION).then((cache) => cache.addAll(FILES)).then(() => self.skipWaiting()));
+  // cache: 'reload' skips the browser's own cache (GitHub Pages keeps files 10 minutes) so a new
+  // version never stores old files.
+  const fresh = FILES.map((file) => new Request(file, { cache: 'reload' }));
+  event.waitUntil(caches.open(VERSION).then((cache) => cache.addAll(fresh)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {

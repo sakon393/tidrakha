@@ -346,6 +346,12 @@
 
   // --- Screens ---
 
+  // Loads a new version of the app once nothing is being typed or photographed.
+  function reloadIfIdle() {
+    const idle = (state.screen === 'screenBrand' || state.screen === 'screenCategory') && $('camera').hidden;
+    if (state.updateReady && idle) location.reload();
+  }
+
   function show(screen) {
     state.screen = screen;
     document.body.dataset.screen = screen;   // the brand screen fits the phone without scrolling
@@ -357,6 +363,7 @@
     $('title').textContent = state.brand && screen !== 'screenBrand' ? state.brand.name : 'ติดราคา';
     [...$('steps').children].forEach((bar, i) => bar.classList.toggle('on', i <= SCREENS.indexOf(screen)));
     setStatus('');
+    reloadIfIdle();
     if (screen === 'screenPhoto') {
       paintStockFiles();
       const category = state.adding || !item() ? state.lastCategory : item().category;
@@ -1707,6 +1714,18 @@
   restore();
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => { /* app still works online */ });
+    const hadVersion = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.register('sw.js').then((reg) => {
+      // Home-screen apps on iPhone often resume instead of starting again, so look for a new version on return.
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) reg.update().catch(() => { /* offline */ });
+      });
+    }).catch(() => { /* app still works online */ });
+    // A new version took over: reload into it. Work is kept on the phone, but wait while a form or the camera is open.
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadVersion || state.updateReady) return;
+      state.updateReady = true;
+      reloadIfIdle();
+    });
   }
 })();

@@ -41,9 +41,14 @@
       <div id="brandGrid" class="brand-grid"></div>
     </section>
 
+    <section id="screenCategory" aria-label="เลือกหมวดสินค้า" hidden>
+      <h2 class="center">เลือกหมวดสินค้า</h2>
+      <div id="categoryGrid" class="category-grid"></div>
+    </section>
+
     <section id="screenPhoto" aria-label="ถ่ายรูปสินค้า" hidden>
-      <h2>ถ่ายรูปสินค้า</h2>
-      <p class="lead">วางสินค้าไว้กลางภาพ แอปจะตัดกึ่งกลางเป็น 1080 × 1080 ให้เอง</p>
+      <h2 id="photoTitle">ถ่ายรูปสินค้า</h2>
+      <p class="lead">วางสินค้าไว้กลางภาพ กล้องจะถ่ายเป็นรูปสี่เหลี่ยม 1080 × 1080 เลย</p>
       <label class="drop">
         <input id="productCam" type="file" accept="image/*" capture="environment">
         <svg class="corners" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M2 16V2h14M84 2h14v14M98 84v14H84M16 98H2V84"/></svg>
@@ -69,12 +74,6 @@
           <label class="tool"><input id="appFile" type="file" accept="application/pdf,.pdf"><span id="appBtn">เพิ่มไฟล์</span></label>
         </div>
       </div>
-    </section>
-
-    <section id="screenCategory" aria-label="เลือกหมวดสินค้า" hidden>
-      <img id="categoryThumb" class="thumb" alt="รูปสินค้า">
-      <h2 class="center">เลือกหมวดสินค้า</h2>
-      <div id="categoryGrid" class="category-grid"></div>
     </section>
 
     <section id="screenForm" aria-label="ข้อมูลสินค้า" hidden>
@@ -195,9 +194,31 @@
     <button id="sendBtn" class="send" type="button" disabled>ส่งเข้า LINE</button>
   </footer>
 
+  <div id="camera" class="camera" role="dialog" aria-label="กล้อง" hidden>
+    <div class="cam-top">
+      <button id="camClose" class="cam-close" type="button">ปิด</button>
+      <span>1080 × 1080</span>
+    </div>
+    <div class="cam-view">
+      <video id="camVideo" playsinline muted autoplay></video>
+      <div id="camBlur" class="cam-blur" hidden></div>
+      <p id="camError" class="cam-error" hidden>เปิดกล้องในแอปไม่ได้ ให้อนุญาตกล้องในตั้งค่า หรือใช้กล้องของเครื่องด้านล่าง</p>
+    </div>
+    <div id="camModes" class="cam-modes" role="group" aria-label="โหมดกล้อง">
+      <button type="button" data-mode="normal">ธรรมดา</button>
+      <button type="button" data-mode="portrait">บุคคล</button>
+    </div>
+    <div class="cam-bottom">
+      <label class="cam-native"><input id="camNative" type="file" accept="image/*" capture="environment">กล้องของเครื่อง</label>
+      <button id="camShot" class="cam-shot" type="button" aria-label="ถ่ายรูป"></button>
+      <span class="cam-native" aria-hidden="true"></span>
+    </div>
+  </div>
+
   <script src="catalog.js"></script>
   <script src="store.js"></script>
   <script src="stock.js"></script>
+  <script src="camera.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

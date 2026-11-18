@@ -16,7 +16,7 @@
   const SWIPE_PX = 60;              // finger travel that counts as a swipe
   const SLIDE_MS = 340;             // matches .gliding in style.css
   const SLIDE_GAP = 16;             // space between two photos while sliding
-  const SCREENS = ['screenBrand', 'screenPhoto', 'screenCategory', 'screenForm'];
+  const SCREENS = ['screenBrand', 'screenCategory', 'screenPhoto', 'screenForm'];
   const TEXT_PX = 46;               // starting size of added text
   const OLD_TEXT_PX = { s: 34, m: 46, l: 64 };   // saved before the size became a slider
   const OLD_SCALES = { s: 80, m: 100, l: 125 };
@@ -356,12 +356,18 @@
     $('title').textContent = state.brand && screen !== 'screenBrand' ? state.brand.name : 'ติดราคา';
     [...$('steps').children].forEach((bar, i) => bar.classList.toggle('on', i <= SCREENS.indexOf(screen)));
     setStatus('');
-    if (screen === 'screenPhoto') paintStockFiles();
+    if (screen === 'screenPhoto') {
+      paintStockFiles();
+      const category = state.adding || !item() ? state.lastCategory : item().category;
+      $('photoTitle').textContent = category ? `ถ่ายรูป${category.name}` : 'ถ่ายรูปสินค้า';
+    }
     scrollTo(0, 0);
   }
 
   function goBack() {
-    if (state.screen === 'screenPhoto' && state.adding && item()) {
+    // Backing out of a new item returns to the last one made.
+    if (state.screen === 'screenCategory' && state.adding && item()) {
+      state.adding = false;
       openForm();
       return;
     }
@@ -392,7 +398,7 @@
     state.items = state.items.filter((it) => it.category);
     state.index = state.items.length - 1;
     buildCategories(brand);
-    show('screenPhoto');
+    show('screenCategory');
   }
 
   function buildCategories(brand) {
@@ -457,6 +463,7 @@
     if (item()) {
       it.chart.kind = item().chart.kind;
       it.chart.step = item().chart.step;
+      it.chart.set = item().chart.set;
       it.sizeScale = item().sizeScale;
     }
     Object.assign(it, { img, url });
@@ -482,8 +489,6 @@
       if (state.adding || !item()) addItem(photo);
       else replacePhoto(photo);
       state.adding = false;
-      $('categoryThumb').src = photo.url;
-      // The next item in a run of the same category skips the category screen.
       if (item().category) openForm();
       else show('screenCategory');
     } catch (e) {
@@ -503,7 +508,13 @@
     }
   }
 
+  // The category comes before the photo: a new item takes it when its photo is taken.
   function chooseCategory(category) {
+    state.lastCategory = category;
+    if (state.adding || !item()) {
+      show('screenPhoto');
+      return;
+    }
     const it = item();
     if (category !== it.category) {
       it.category = category;
@@ -546,7 +557,6 @@
       return;
     }
     if (it !== item()) return;
-    $('categoryThumb').src = it.url;
     render();
     releaseOthers();
   }
@@ -556,7 +566,7 @@
     state.items = [];
     state.index = -1;
     state.adding = true;
-    show('screenPhoto');
+    show(state.lastCategory ? 'screenPhoto' : 'screenCategory');
   }
 
   function goToItem(step) {
@@ -616,8 +626,15 @@
   function sizeRows(it) {
     if (isCustom(it)) return [];
     if (it.category.sizeChart) return chartRows(it);
-    return it.category.sizes.map((label) => ({ key: label, label }));
+    return sizeList(it).map((label) => ({ key: label, label }));
   }
+
+  // A category with sizeSets (NIKE sneakers: men / women) uses the set picked in it.chart.set.
+  const sizeSet = (it) => {
+    const sets = it.category.sizeSets;
+    return sets ? sets.find((s) => s.id === it.chart.set) || sets[0] : null;
+  };
+  const sizeList = (it) => (sizeSet(it) ? sizeSet(it).sizes : it.category.sizes);
 
   const isCustom = (it) => !!it.category.sizeChart && it.chart.kind === 'custom';
 
@@ -655,6 +672,15 @@
     box.textContent = '';
     const it = item();
     const chart = it.category.sizeChart;
+    if (it.category.sizeSets) {
+      box.appendChild(optionRow('ไซส์', it.category.sizeSets.map((s) => [s.id, s.name]), sizeSet(it).id, (id) => {
+        if (id === sizeSet(it).id) return;
+        it.chart.set = id;
+        it.sizes.clear();   // the other list has different labels
+        sizesChanged();
+        buildSizeButtons();
+      }));
+    }
     if (!chart) return;
     box.appendChild(optionRow('ประเภท', Object.entries(chart.kinds).map(([id, kind]) => [id, kind.name]), it.chart.kind, (kind) => {
       it.chart.kind = kind;
@@ -1407,6 +1433,16 @@
       handler(file);
     });
   });
+
+  // The camera buttons open the in-app square camera when the phone allows it.
+  [['productCam', onProduct], ['retakeCam', onRetake]].forEach(([id, handler]) => {
+    $(id).addEventListener('click', (e) => {
+      if (!Camera.supported()) return;
+      e.preventDefault();
+      Camera.open(handler);
+    });
+  });
+  Camera.init();
 
   [[priceInput, 'price'], [fullInput, 'full'], [codeInput, 'code']].forEach(([input, key]) => {
     input.addEventListener('input', () => {

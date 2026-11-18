@@ -50,10 +50,46 @@
   const PUMA_SIZES = { sneakers: PUMA_SHOE_SIZES, sandals: PUMA_SANDAL_SIZES };
   const PUMA_CATEGORIES = ADIDAS_CATEGORIES.map((c) => (PUMA_SIZES[c.id] ? { ...c, sizes: PUMA_SIZES[c.id] } : c));
 
+  const NIKE_MEN_SHOE_SIZES = [
+    'US 5 EU 37.5 CM 23.5', 'US 5.5 EU 38 CM 24', 'US 6 EU 38.5 CM 24', 'US 6.5 EU 39 CM 24.5',
+    'US 7 EU 40 CM 25', 'US 7.5 EU 40.5 CM 25.5', 'US 8 EU 41 CM 26', 'US 8.5 EU 42 CM 26.5',
+    'US 9 EU 42.5 CM 27', 'US 9.5 EU 43 CM 27.5', 'US 10 EU 44 CM 28', 'US 10.5 EU 44.5 CM 28.5',
+    'US 11 EU 45 CM 29', 'US 11.5 EU 45.5 CM 29.5', 'US 12 EU 46 CM 30', 'US 12.5 EU 46.5 CM 30.5',
+    'US 13 EU 47.5 CM 31',
+  ];
+  const NIKE_WOMEN_SHOE_SIZES = [
+    'US 5 EU 35.5 CM 22', 'US 5.5 EU 36 CM 22.5', 'US 6 EU 36.5 CM 23', 'US 6.5 EU 37.5 CM 23.5',
+    'US 7 EU 38 CM 24', 'US 7.5 EU 38.5 CM 24.5', 'US 8 EU 39 CM 25', 'US 8.5 EU 40 CM 25.5',
+    'US 9 EU 40.5 CM 26', 'US 9.5 EU 41 CM 26.5', 'US 10 EU 42 CM 27', 'US 10.5 EU 42.5 CM 27.5',
+    'US 11 EU 43 CM 28', 'US 11.5 EU 44 CM 28.5', 'US 12 EU 44.5 CM 29',
+  ];
+  const NIKE_MEN_SANDAL_SIZES = [
+    'US 5 EU 37.5 CM 23.5', 'US 6 EU 38.5 CM 24', 'US 7 EU 40 CM 25', 'US 8 EU 41 CM 26',
+    'US 9 EU 42.5 CM 27', 'US 10 EU 44 CM 28', 'US 11 EU 45 CM 29', 'US 12 EU 46 CM 30',
+  ];
+  const NIKE_WOMEN_SANDAL_SIZES = [
+    'US 5 EU 35.5 CM 22', 'US 6 EU 36.5 CM 23', 'US 7 EU 38 CM 24', 'US 8 EU 39 CM 25',
+    'US 9 EU 40.5 CM 26', 'US 10 EU 42 CM 27', 'US 11 EU 43 CM 28', 'US 12 EU 44.5 CM 29',
+  ];
+  // sizeSets: lists to choose between on the size panel; the first is the default.
+  const menWomen = (men, women) => ({
+    sizes: men,
+    sizeSets: [
+      { id: 'men', name: 'ผู้ชาย', sizes: men },
+      { id: 'women', name: 'ผู้หญิง', sizes: women },
+    ],
+  });
+  const NIKE_SIZES = {
+    sneakers: menWomen(NIKE_MEN_SHOE_SIZES, NIKE_WOMEN_SHOE_SIZES),
+    sandals: menWomen(NIKE_MEN_SANDAL_SIZES, NIKE_WOMEN_SANDAL_SIZES),
+  };
+  const NIKE_CATEGORIES = ADIDAS_CATEGORIES.map((c) => (NIKE_SIZES[c.id] ? { ...c, ...NIKE_SIZES[c.id] } : c));
+
   const BRANDS = [
     { id: 'adidas', name: 'adidas', categories: ADIDAS_CATEGORIES },
     { id: 'puma', name: 'PUMA', categories: PUMA_CATEGORIES },
-    { id: 'nike', name: 'NIKE', categories: null },
+    // Same as adidas except sneakers and sandals, which have men's and women's sizes.
+    { id: 'nike', name: 'NIKE', categories: NIKE_CATEGORIES },
     { id: 'ccoo', name: 'CCOO', categories: null },
   ];
 
